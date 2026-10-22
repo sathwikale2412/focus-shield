@@ -77,15 +77,13 @@ YouTube filter.
 
 These are real, read off the source, and worth knowing before a live demo:
 
-- The master switch can read **on** while the service is dead. `is_service_running` is restored
-  from preferences ([MainViewModel.kt:61](app/src/main/java/com/example/focussheild/MainViewModel.kt#L61))
-  and there is no `BOOT_COMPLETED` receiver, so after a reboot or a system kill the toggle lies.
-- An **expired timed block** stops being enforced
-  ([FocusService.kt:80](app/src/main/java/com/example/focussheild/FocusService.kt#L80)) but is
-  never removed from `blocked_apps`, so the list still presents it as blocked.
-- The hourly "motivational" overlay fires on **allowed** apps too, and its OK button calls
-  `forceGoHome()` ([FocusService.kt:157-165](app/src/main/java/com/example/focussheild/FocusService.kt#L157))
-  — it ejects you from whatever you were doing, including a study app.
+- Blocking does not resume after a reboot. There is no `BOOT_COMPLETED` receiver, so the master
+  switch correctly reads **off** and you have to turn it back on. It no longer lies: the switch
+  state is derived from a `service_heartbeat` stamp that `FocusService` writes while its polling
+  loop is alive, so a system kill or a failed start now shows as off.
+- The hourly encouragement overlay fires on **allowed** apps too — that is the design — but it now
+  only dismisses itself. It used to call `forceGoHome()` from its own button, which ejected you
+  from whatever app you were in, including a study app.
 - `POST_NOTIFICATIONS` is declared but **never requested at runtime**, so on Android 13+ the
   foreground-service notification is suppressed.
 - The **block is soft**: the overlay has a dismiss button, and the YouTube intervention has a

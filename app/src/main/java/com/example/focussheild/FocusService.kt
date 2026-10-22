@@ -26,6 +26,7 @@ class FocusService : Service() {
     private val checkInterval = 300L 
     private var windowManager: WindowManager? = null
     private var overlayView: FrameLayout? = null
+    private var lastHeartbeatAt = 0L
 
     private val checkTask = object : Runnable {
         override fun run() {
@@ -47,11 +48,13 @@ class FocusService : Service() {
             .build()
         startForeground(1, notification)
         
+        pruneExpiredBlocks(this)
         handler.post(checkTask)
         return START_STICKY
     }
 
     private fun checkForegroundApp() {
+        writeHeartbeat()
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
         val time = System.currentTimeMillis()
         
@@ -77,7 +80,9 @@ class FocusService : Service() {
             
             if (blockedApps.contains(currentForegroundApp)) {
                 val blockedUntil = sharedPrefs.getLong("blocked_until_$currentForegroundApp", 0L)
-                if (blockedUntil == 0L || blockedUntil > System.currentTimeMillis()) {
+                if (blockedUntil > 0L && blockedUntil <= System.currentTimeMillis()) {
+                    pruneExpiredBlocks(this)
+                } else {
                     showOverlay(currentForegroundApp, isShame = true)
                     forceGoHome()
                 }
@@ -160,7 +165,9 @@ class FocusService : Service() {
                         setTextColor(if (isShame) Color.parseColor("#0D47A1") else Color.parseColor("#388E3C"))
                         setOnClickListener {
                             removeOverlay()
-                            forceGoHome()
+                            // The encouragement overlay appears over apps the user is allowed to
+                            // open; sending them home from it ejected them from their study apps.
+                            if (isShame) forceGoHome()
                         }
                     }
                     
@@ -212,9 +219,21 @@ class FocusService : Service() {
         }
     }
 
+    // The master switch derives its state from this stamp, so a stopped service cannot keep
+    // claiming it is alive after a system kill or a reboot.
+    private fun writeHeartbeat() {
+        val now = System.currentTimeMillis()
+        if (now - lastHeartbeatAt < 1000L) return
+        lastHeartbeatAt = now
+        getSharedPreferences("focus_shield_prefs", Context.MODE_PRIVATE)
+            .edit().putLong("service_heartbeat", now).apply()
+    }
+
     override fun onDestroy() {
         handler.removeCallbacks(checkTask)
         removeOverlay()
+        getSharedPreferences("focus_shield_prefs", Context.MODE_PRIVATE)
+            .edit().putLong("service_heartbeat", 0L).apply()
         super.onDestroy()
     }
 }

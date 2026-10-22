@@ -58,7 +58,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         calculateTotalUsage()
         loadAnalytics()
         generateWeeklyReport()
-        _isServiceRunning.value = sharedPrefs.getBoolean("is_service_running", false)
+        refreshServiceState()
+        watchServiceHeartbeat()
     }
 
     override fun onCleared() {
@@ -181,11 +182,29 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun toggleServiceState(isRunning: Boolean) {
         _isServiceRunning.value = isRunning
-        sharedPrefs.edit().putBoolean("is_service_running", isRunning).apply()
+        if (!isRunning) sharedPrefs.edit().putLong("service_heartbeat", 0L).apply()
+    }
+
+    // The switch used to read back a persisted boolean, so it claimed the blocker was running
+    // after a reboot or a system kill. FocusService stamps service_heartbeat while its polling
+    // loop is alive, and that stamp is the only honest answer.
+    private fun refreshServiceState() {
+        val lastBeat = sharedPrefs.getLong("service_heartbeat", 0L)
+        _isServiceRunning.value = System.currentTimeMillis() - lastBeat < 5000
+    }
+
+    private fun watchServiceHeartbeat() {
+        viewModelScope.launch {
+            while (true) {
+                refreshServiceState()
+                kotlinx.coroutines.delay(2000)
+            }
+        }
     }
 
     private fun loadApps() {
         viewModelScope.launch {
+            pruneExpiredBlocks(getApplication<Application>())
             val pm = getApplication<Application>().packageManager
             val intent = Intent(Intent.ACTION_MAIN, null)
             intent.addCategory(Intent.CATEGORY_LAUNCHER)
