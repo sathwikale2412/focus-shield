@@ -92,7 +92,7 @@ These are real, read off the source, and worth knowing before a live demo:
   ([FocusAccessibilityService.kt:11-19](app/src/main/java/com/example/focussheild/FocusAccessibilityService.kt#L11)).
   No model, no ML Kit, no learning.
 - The focus score is a fixed `100 − 5 × distractions` heuristic
-  ([MainViewModel.kt:118](app/src/main/java/com/example/focussheild/MainViewModel.kt#L118)), and the
+  ([MainViewModel.kt:117](app/src/main/java/com/example/focussheild/MainViewModel.kt#L117)), and the
   weekly report keys on a weekday abbreviation over a rolling 7-day window, so days can overwrite
   each other.
 - `recordDistraction()` and `AppInfo.blockKeywords` are dead code, and the UI footer says "v1.2"
@@ -100,4 +100,7 @@ These are real, read off the source, and worth knowing before a live demo:
 
 ## Demo
 
-_A reference video of the app working goes here._
+<table><tr>
+<td valign="top" width="260"><a href="docs/focus-shield-demo.mp4"><img src="docs/focus-shield-demo.svg" width="240" alt="Play the Focus Shield demo"></a><br><em>~10 MB MP4 — opens in GitHub's player</em></td>
+<td valign="top"><b>What the clip shows</b><br>Add one or two lines here describing the order you demonstrated it in — block an app, flip the master switch on, watch the overlay interrupt it, then let the block expire.</td>
+</tr></table>
